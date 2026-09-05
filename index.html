@@ -35,7 +35,7 @@
   table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
   th,td{border-right:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:9px 11px;text-align:left;white-space:nowrap;max-width:420px;overflow:hidden;text-overflow:ellipsis}
   thead th{position:sticky;top:0;background:#eef4ff;z-index:3;color:#173b7a;min-width:120px}
-  .head-row{cursor:pointer}
+  .head-row{cursor:pointer; user-select: none;}
   .head-row:hover{background:#e3edff}
   .filter-row th{background:white;position:sticky;top:39px;z-index:3;padding:6px}
   .filter{width:100%;min-width:100px;border:1px solid #cbd5e1;border-radius:7px;padding:8px;font-size:13px;outline:none}
@@ -49,7 +49,8 @@
   .page-btn:disabled{opacity:.45;cursor:not-allowed}
   .footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:#64748b;font-size:13px;margin-top:8px}
   .developer{text-align:right;font-size:12px;color:#94a3b8;margin-top:10px}
-  .sort{font-size:11px;margin-left:5px;color:#64748b}
+  .sort{font-size:11px;margin-left:5px;display:inline-block;min-width:12px;}
+  .sort.active-sort{color:#1d4ed8;font-weight:bold;}
 
   @media(max-width:700px){
     .app{padding:10px}
@@ -64,8 +65,8 @@
   <div class="header">
     <div class="header-main">
       <div>
-        <h1>Excel Search Table</h1>
-        <p>Upload an Excel file and search every column instantly.</p>
+        <h1>Spreadsheet Search Table</h1>
+        <p>Upload an Excel or ODS file and search every column instantly.</p>
       </div>
       <div class="contact-box">
         <div class="contact-title">Contact Us</div>
@@ -78,21 +79,22 @@
   </div>
 
   <div class="toolbar">
-    <label class="file-label" for="excelFile">📁 Choose Excel File</label>
-    <input id="excelFile" type="file" accept=".xlsx,.xls,.csv">
+    <!-- Updated Label and Accept Attribute -->
+    <label class="file-label" for="excelFile">📁 Choose Spreadsheet (.xlsx, .ods)</label>
+    <input id="excelFile" type="file" accept=".xlsx,.xls,.csv,.ods">
     <input id="globalSearch" class="global" type="search" placeholder="🔎 Search all columns...">
     <button id="clearBtn" class="btn" type="button">✕ Clear Filters</button>
-    <button id="exportExcelBtn" class="btn" type="button">⬇ Export Excel</button>
+    <button id="exportExcelBtn" class="btn" type="button">⬇ Export</button>
     <span id="fileName" class="file-name">No file selected</span>
   </div>
 
   <div id="sheetTabs" class="sheet-tabs"></div>
-  <div id="status" class="status">Upload an Excel file to begin.</div>
+  <div id="status" class="status">Upload an Excel or ODS file to begin.</div>
 
   <div class="table-wrap">
     <table id="dataTable">
       <thead></thead>
-      <tbody><tr><td class="empty">Your Excel data will appear here.</td></tr></tbody>
+      <tbody><tr><td class="empty">Your spreadsheet data will appear here.</td></tr></tbody>
     </table>
   </div>
 
@@ -103,7 +105,6 @@
   <div class="developer">Excel Search Table • Developer: Ravi Navadkar</div>
 </div>
 
-<!-- Keep the same working XLSX library used in the original version -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 (() => {
@@ -196,8 +197,12 @@
 
     headers.forEach((h,i)=>{
       const th=document.createElement('th');
-      th.innerHTML=esc(h)+(sortCol===i?` <span class="sort">${sortDir===1?'▲':'▼'}</span>`:'');
-      th.title='Click to sort';
+      // Added persistent sorting icon for every field
+      const sortIcon = sortCol === i ? (sortDir === 1 ? '▲' : '▼') : '↕';
+      const activeClass = sortCol === i ? 'active-sort' : '';
+      
+      th.innerHTML=esc(h)+` <span class="sort ${activeClass}">${sortIcon}</span>`;
+      th.title='Click to sort this column';
 
       th.addEventListener('click',()=>{
         if(sortCol===i) sortDir*=-1;
@@ -258,7 +263,6 @@
         }
       });
 
-      // Approximate character width. Keep a sensible minimum and maximum.
       const width=Math.min(420,Math.max(120,longest*8+30));
 
       th.style.width=width+'px';
@@ -348,12 +352,11 @@
     if(!file)return;
 
     fileName.textContent=file.name;
-    status.textContent='Reading Excel file...';
+    status.textContent='Reading spreadsheet file...';
 
     try{
       const buf=await file.arrayBuffer();
 
-      // This is the original working workbook-read method.
       workbook=XLSX.read(buf,{type:'array',cellDates:true});
 
       sheets={};
@@ -391,8 +394,8 @@
 
     }catch(err){
       console.error(err);
-      status.textContent='Could not read this file. Please select a valid Excel workbook.';
-      tbody.innerHTML='<tr><td class="empty">Invalid or unsupported Excel file.</td></tr>';
+      status.textContent='Could not read this file. Please select a valid Excel or ODS workbook.';
+      tbody.innerHTML='<tr><td class="empty">Invalid or unsupported file format.</td></tr>';
     }
   });
 
@@ -412,7 +415,7 @@
 
   exportExcelBtn.addEventListener('click',()=>{
     if(!headers.length){
-      alert('Please upload an Excel file first.');
+      alert('Please upload an Excel or ODS file first.');
       return;
     }
 
@@ -427,7 +430,7 @@
     const wb=XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(wb,ws,'Filtered Data');
-    XLSX.writeFile(wb,'Filtered_Excel_Data.xlsx');
+    XLSX.writeFile(wb,'Filtered_Spreadsheet_Data.xlsx');
   });
 })();
 </script>
